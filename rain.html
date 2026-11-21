@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NIETZSCHE — THE DIGITAL PROPHET</title>
+  <style>
+    /* ==========================================================================
+       DESIGN TOKENS & RESET
+       Pure Matrix palette: Pure Black, Deep Green, Muted Green, Matrix Green, Neon Green
+       ========================================================================== */
+    :root {
+      --bg-black: #000000;
+      --green-deep: #001A08;
+      --green-muted: #008F11;
+      --green-matrix: #00FF41;
+      --green-neon: #39FF14;
+      --green-highlight: #CCFFCC;
+      --font-mono: "Courier New", Courier, "Lucida Console", Monaco, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-black);
+      color: var(--green-matrix);
+      font-family: var(--font-mono);
+      cursor: crosshair;
+    }
+
+    /* Fullscreen Interactive Matrix Canvas */
+    #matrix-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 1;
+    }
+
+    /* Subtle CRT Monitor Scanlines & Phosphor Vignette Overlay */
+    .crt-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background:
+        /* Horizontal scanlines */
+        linear-gradient(
+          rgba(0, 0, 0, 0) 50%,
+          rgba(0, 12, 3, 0.36) 50%
+        ),
+        /* Subtle RGB subpixel vertical phosphor cadence */
+        linear-gradient(
+          90deg,
+          rgba(255, 0, 0, 0.015),
+          rgba(0, 255, 65, 0.02),
+          rgba(0, 120, 255, 0.015)
+        ),
+        /* Deep radial vignette framing the central portrait */
+        radial-gradient(
+          circle at 50% 48%,
+          rgba(0, 0, 0, 0) 42%,
+          rgba(0, 10, 3, 0.55) 82%,
+          rgba(0, 0, 0, 0.92) 100%
+        );
+      background-size: 100% 3px, 6px 100%, 100% 100%;
+      animation: crtFlicker 7s infinite alternate ease-in-out;
+    }
+
+    @keyframes crtFlicker {
+      0%, 100% { opacity: 0.92; }
+      50% { opacity: 0.98; }
+      72% { opacity: 0.89; }
+      74% { opacity: 0.97; }
+    }
+
+    /* ==========================================================================
+       MINIMALIST TERMINAL HUD OVERLAY
+       Strictly anchored to margins/corners so the central portrait is never obscured
+       ========================================================================== */
+    .hud-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      padding: clamp(14px, 2.5vw, 32px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .title-block {
+      max-width: 360px;
+      opacity: 0;
+      transform: translateY(-6px);
+      animation: hudFadeIn 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+    }
+
+    .main-title {
+      font-size: clamp(1.35rem, 2.8vw, 2.35rem);
+      font-weight: 700;
+      letter-spacing: 0.28em;
+      color: var(--green-neon);
+      text-shadow:
+        0 0 8px rgba(0, 255, 65, 0.75),
+        0 0 22px rgba(57, 255, 20, 0.35);
+      line-height: 1.1;
+    }
+
+    .sub-title {
+      margin-top: 6px;
+      font-size: clamp(0.68rem, 1.05vw, 0.85rem);
+      letter-spacing: 0.32em;
+      color: var(--green-matrix);
+      opacity: 0.88;
+      text-shadow: 0 0 6px rgba(0, 255, 65, 0.45);
+    }
+
+    .status-line {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      color: var(--green-muted);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green-neon);
+      box-shadow: 0 0 8px var(--green-neon);
+      animation: pulseDot 1.6s infinite ease-in-out;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.75); }
+    }
+
+    /* Top-right philosophical axiom */
+    .quote-block {
+      max-width: 290px;
+      text-align: right;
+      opacity: 0;
+      transform: translateY(-6px);
+      animation: hudFadeIn 2s cubic-bezier(0.16, 1, 0.3, 1) 1.4s forwards;
+    }
+
+    .quote-text {
+      font-size: clamp(0.68rem, 0.95vw, 0.8rem);
+      line-height: 1.55;
+      letter-spacing: 0.16em;
+      color: var(--green-matrix);
+      text-shadow: 0 0 8px rgba(0, 255, 65, 0.35);
+    }
+
+    .quote-tag {
+      margin-top: 5px;
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      color: var(--green-muted);
+    }
+
+    /* Bottom metadata & interactive terminal triggers */
+    .hud-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: hudFadeIn 2s cubic-bezier(0.16, 1, 0.3, 1) 1.8s forwards;
+    }
+
+    .meta-block {
+      font-size: clamp(0.64rem, 0.9vw, 0.76rem);
+      letter-spacing: 0.22em;
+      color: var(--green-matrix);
+      opacity: 0.82;
+      text-shadow: 0 0 6px rgba(0, 255, 65, 0.35);
+    }
+
+    .meta-sub {
+      margin-top: 4px;
+      font-size: 0.6rem;
+      letter-spacing: 0.16em;
+      color: var(--green-muted);
+    }
+
+    .controls-block {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .term-btn {
+      background: rgba(0, 26, 8, 0.65);
+      border: 1px solid rgba(0, 255, 65, 0.38);
+      color: var(--green-matrix);
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      letter-spacing: 0.16em;
+      padding: 7px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      backdrop-filter: blur(2px);
+    }
+
+    .term-btn:hover, .term-btn:focus-visible {
+      background: rgba(0, 255, 65, 0.16);
+      border-color: var(--green-neon);
+      color: var(--green-highlight);
+      box-shadow: 0 0 12px rgba(0, 255, 65, 0.35);
+      outline: none;
+    }
+
+    .term-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* Hidden file input for optional local portrait upload */
+    #portrait-upload {
+      display: none;
+    }
+
+    /* Dropzone visual indicator when dragging an image file */
+    .drop-indicator {
+      position: fixed;
+      inset: 18px;
+      z-index: 10;
+      border: 1px dashed var(--green-neon);
+      background: rgba(0, 18, 5, 0.78);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      letter-spacing: 0.25em;
+      color: var(--green-neon);
+      text-shadow: 0 0 12px var(--green-neon);
+      pointer-events: none;
+    }
+
+    .drop-indicator.active {
+      display: flex;
+    }
+
+    @keyframes hudFadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Responsive adjustments for mobile viewports */
+    @media (max-width: 680px) {
+      .quote-block {
+        text-align: left;
+        max-width: 100%;
+      }
+      .hud-bottom {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .term-btn {
+        padding: 8px 10px;
+        font-size: 0.62rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Primary HTML5 Canvas for Digital Rain + Nietzsche Character Portrait -->
+  <canvas id="matrix-canvas"></canvas>
+
+  <!-- CRT Scanlines & Phosphor Vignette -->
+  <div class="crt-overlay" aria-hidden="true"></div>
+
+  <!-- Drag & Drop Feedback Overlay -->
+  <div id="drop-indicator" class="drop-indicator">
+    [ INJECT EXTERNAL PORTRAIT MATRIX ]
+  </div>
+
+  <!-- Minimalist Terminal HUD -->
+  <header class="hud-layer">
+    <div class="hud-top">
+      <div class="title-block">
+        <h1 class="main-title">NIETZSCHE</h1>
+        <div class="sub-title">THE DIGITAL PROPHET</div>
+        <div class="status-line">
+          <span class="status-dot"></span>
+          <span id="status-text">INITIALIZING NEURAL STREAM...</span>
+        </div>
+      </div>
+
+      <div class="quote-block">
+        <p class="quote-text">"MAN IS SOMETHING THAT SHALL BE OVERCOME."</p>
+        <div class="quote-tag">// THUS SPOKE ZARATHUSTRA</div>
+      </div>
+    </div>
+
+    <div class="hud-bottom">
+      <div class="meta-block">
+        <div>FRIEDRICH NIETZSCHE // 1844–1900</div>
+        <div class="meta-sub">[MOVE] DISTORT FIELD &nbsp;•&nbsp; [CLICK] GLITCH WAVE</div>
+      </div>
+
+      <div class="controls-block">
+        <button id="btn-reconstruct" class="term-btn" title="Disperse & Reconstruct Consciousness (R)">
+          RECONSTRUCT // [R]
+        </button>
+        <button id="btn-glitch" class="term-btn" title="Trigger Digital Glitch Wave (Space)">
+          GLITCH PULSE
+        </button>
+        <button id="btn-upload" class="term-btn" title="Load Custom Portrait Image">
+          LOAD SOURCE
+        </button>
+        <input type="file" id="portrait-upload" accept="image/*" />
+      </div>
+    </div>
+  </header>
+
+  <script>
+    /**
+     * ============================================================================
+     * NIETZSCHE — THE DIGITAL PROPHET
+     * Self-Contained Matrix ASCII / Character Portrait Engine
+     *
+     * Architecture:
+     * 1. Procedural High-Detail Chiaroscuro Portrait Synthesizer (Offscreen Canvas):
+     *    Renders an anatomically accurate, high-contrast 19th-century portrait of
+     *    Friedrich Nietzsche (high furrowed forehead, deep-set shadowed eyes,
+     *    prominent nose, swept-back hair, and massive drooping walrus moustache
+     *    with individual strand texture) onto a luminance buffer.
+     * 2. Character Density & Luminance Sampler:
+     *    Maps the luminance buffer onto a responsive character grid where every
+     *    cell stores brightness, edge gradient, character glyph, phase, and
+     *    dispersion physics vectors.
+     * 3. Dual-Layer Matrix Digital Rain Engine:
+     *    - Background layer: Deep, varied-speed cascading streams establishing
+     *      infinite digital depth.
+     *    - Foreground / Portrait integration: Rain streams illuminate and mutate
+     *      the characters forming Nietzsche's face as they pass over his contours.
+     * 4. Interactive Physics & Atmospheric Post-Effects:
+     *    - Cursor magnetic field ripple
+     *    - Click / Spacebar horizontal slice glitch & chromatic aberration pulse
+     *    - 'R' key / Button dispersion & smooth particle-to-glyph reconstruction
+     * ============================================================================
+     */
+
+    (function () {
+      'use strict';
+
+      // ------------------------------------------------------------------------
+      // 1. CONFIGURATION & MATRIX GLYPH SET
+      // ------------------------------------------------------------------------
+      const MATRIX_CHARS =
+        'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ' +
+        '0123456789ABCDEF' +
+        'Z:・."=*+-<>¦｜╌çｸﾘ';
+
+      // Ordered density ramp from sparse/dark glyphs to dense/bright glyphs
+      const DENSITY_RAMP = ' .·:;-=+*#%@MWﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ0189$#';
+
+      const canvas = document.getElementById('matrix-canvas');
+      const ctx = canvas.getContext('2d', { alpha: false });
+      const statusText = document.getElementById('status-text');
+
+      let width = 0;
+      let height = 0;
+      let dpr = 1;
+
+      // Offscreen high-res portrait source canvas (512 x 640 aspect 4:5)
+      const SRC_W = 512;
+      const SRC_H = 640;
+      const portraitCanvas = document.createElement('canvas');
+      portraitCanvas.width = SRC_W;
+      portraitCanvas.height = SRC_H;
+      const pCtx = portraitCanvas.getContext('2d');
+
+      // Animation & State variables
+      let startTime = performance.now();
+      let lastTime = startTime;
+      let bootProgress = 0; // 0 -> 1 over ~4.8 seconds
+
+      // Interactive pointer state
+      const pointer = {
+        x: -9999,
+        y: -9999,
+        vx: 0,
+        vy: 0,
+        active: false
+      };
+
+      // Glitch wave & reconstruction state
+      let glitchIntensity = 0;
+      let glitchWaves = [];
+      let disperseMode = false;
+      let disperseAmount = 0; // 0 = formed, 1 = fully dispersed
+
+      // Matrix Rain Streams
+      let bgStreams = [];
+      let fgStreams = [];
+
+      // Portrait Character Cells
+      let portraitCells = [];
+      let cellFontSize = 9;
+      let portraitBounds = { x: 0, y: 0, w: 0, h: 0 };
+
+      // ------------------------------------------------------------------------
+      // 2. PROCEDURAL FRIEDRICH NIETZSCHE PORTRAIT SYNTHESIZER
+      //    Draws a richly shaded, unmistakable 19th-century chiaroscuro portrait
+      //    with fine hair & moustache strand detailing so ASCII sampling yields
+      //    immediate facial recognition.
+      // ------------------------------------------------------------------------
+      function renderProceduralNietzsche() {
+        pCtx.save();
+        pCtx.fillStyle = '#000000';
+        pCtx.fillRect(0, 0, SRC_W, SRC_H);
+
+        const cx = SRC_W * 0.5;
+
+        // Subtle atmospheric backdrop halo behind head for silhouette separation
+        const backHalo = pCtx.createRadialGradient(cx, 275, 40, cx, 290, 250);
+        backHalo.addColorStop(0, 'rgba(52, 52, 52, 0.9)');
+        backHalo.addColorStop(0.65, 'rgba(20, 20, 20, 0.55)');
+        backHalo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        pCtx.fillStyle = backHalo;
+        pCtx.fillRect(0, 0, SRC_W, SRC_H);
+
+        // --- A. 19TH-CENTURY COAT, SHOULDERS & HIGH COLLAR ---
+        pCtx.save();
+        pCtx.beginPath();
+        pCtx.moveTo(45, 640);
+        pCtx.quadraticCurveTo(62, 505, 165, 472);
+        pCtx.lineTo(347, 472);
+        pCtx.quadraticCurveTo(450, 505, 467, 640);
+        pCtx.closePath();
+        const coatGrad = pCtx.createLinearGradient(cx, 465, cx, 640);
+        coatGrad.addColorStop(0, '#2a2a2a');
+        coatGrad.addColorStop(0.4, '#181818');
+        coatGrad.addColorStop(1, '#080808');
+        pCtx.fillStyle = coatGrad;
+        pCtx.fill();
+
+        // Coat lapels & folds
+        pCtx.strokeStyle = '#4a4a4a';
+        pCtx.lineWidth = 3;
+        pCtx.beginPath();
+        pCtx.moveTo(182, 475);
+        pCtx.lineTo(222, 635);
+        pCtx.moveTo(330, 475);
+        pCtx.lineTo(290, 635);
+        pCtx.stroke();
+
+        // White high shirt collar & dark cravat/tie
+        pCtx.fillStyle = '#dcdcdc';
+        pCtx.beginPath();
+        pCtx.moveTo(205, 468);
+        pCtx.lineTo(256, 525);
+        pCtx.lineTo(307, 468);
+        pCtx.lineTo(286, 456);
+        pCtx.lineTo(256, 495);
+        pCtx.lineTo(226, 456);
+        pCtx.closePath();
+        pCtx.fill();
+
+        // Dark cravat knot
+        pCtx.fillStyle = '#151515';
+        pCtx.beginPath();
+        pCtx.moveTo(238, 498);
+        pCtx.lineTo(274, 498);
+        pCtx.lineTo(268, 635);
+        pCtx.lineTo(244, 635);
+        pCtx.closePath();
+        pCtx.fill();
+        pCtx.restore();
+
+        // --- B. NECK ---
+        const neckGrad = pCtx.createLinearGradient(200, 410, 312, 410);
+        neckGrad.addColorStop(0, '#3a3a3a');
+        neckGrad.addColorStop(0.45, '#8c8c8c');
+        neckGrad.addColorStop(1, '#262626');
+        pCtx.fillStyle = neckGrad;
+        pCtx.fillRect(212, 395, 88, 82);
+
+        // --- C. THICK SWEPT-BACK HAIR (BACK VOLUME) ---
+        pCtx.save();
+        pCtx.fillStyle = '#252525';
+        pCtx.beginPath();
+        pCtx.moveTo(126, 290);
+        pCtx.bezierCurveTo(106, 175, 145, 76, 256, 72);
+        pCtx.bezierCurveTo(367, 76, 406, 175, 386, 290);
+        pCtx.bezierCurveTo(378, 330, 362, 342, 355, 315);
+        pCtx.lineTo(157, 315);
+        pCtx.bezierCurveTo(150, 342, 134, 330, 126, 290);
+        pCtx.fill();
+        pCtx.restore();
+
+        // --- D. CRANIUM & FACIAL STRUCTURE ---
+        pCtx.save();
+        pCtx.beginPath();
+        // Broad upper cranium tapering to strong jawline & chin
+        pCtx.moveTo(155, 225);
+        pCtx.bezierCurveTo(152, 132, 195, 102, 256, 102);
+        pCtx.bezierCurveTo(317, 102, 360, 132, 357, 225);
+        pCtx.bezierCurveTo(356, 295, 345, 355, 318, 398);
+        pCtx.quadraticCurveTo(286, 444, 256, 446);
+        pCtx.quadraticCurveTo(226, 444, 194, 398);
+        pCtx.bezierCurveTo(167, 355, 156, 295, 155, 225);
+        pCtx.closePath();
+
+        // Dramatic chiaroscuro directional lighting (lit from upper-left front)
+        const faceGrad = pCtx.createRadialGradient(228, 195, 18, 258, 265, 185);
+        faceGrad.addColorStop(0, '#f5f5f5');
+        faceGrad.addColorStop(0.38, '#cccccc');
+        faceGrad.addColorStop(0.72, '#787878');
+        faceGrad.addColorStop(1, '#2b2b2b');
+        pCtx.fillStyle = faceGrad;
+        pCtx.fill();
+
+        // Clip inside face for anatomical shadows and highlights
+        pCtx.clip();
+
+        // Temporal & cheekbone sculpting shadows
+        const rightShadow = pCtx.createLinearGradient(285, 200, 362, 260);
+        rightShadow.addColorStop(0, 'rgba(0,0,0,0)');
+        rightShadow.addColorStop(1, 'rgba(0,0,0,0.68)');
+        pCtx.fillStyle = rightShadow;
+        pCtx.fillRect(260, 110, 110, 340);
+
+        // Cheekbone highlights
+        const leftCheek = pCtx.createRadialGradient(198, 282, 5, 202, 286, 44);
+        leftCheek.addColorStop(0, 'rgba(255,255,255,0.55)');
+        leftCheek.addColorStop(1, 'rgba(255,255,255,0)');
+        pCtx.fillStyle = leftCheek;
+        pCtx.fillRect(150, 235, 100, 105);
+
+        const rightCheek = pCtx.createRadialGradient(310, 284, 4, 308, 288, 38);
+        rightCheek.addColorStop(0, 'rgba(210,210,210,0.32)');
+        rightCheek.addColorStop(1, 'rgba(210,210,210,0)');
+        pCtx.fillStyle = rightCheek;
+        pCtx.fillRect(265, 240, 95, 100);
+
+        // --- E. HIGH WRINKLED FOREHEAD & FURROWED BROW ---
+        // Horizontal contemplative forehead creases
+        pCtx.strokeStyle = 'rgba(45, 45, 45, 0.42)';
+        pCtx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+          const fy = 152 + i * 14;
+          pCtx.beginPath();
+          pCtx.moveTo(192 + i * 4, fy);
+          pCtx.quadraticCurveTo(256, fy - 5, 320 - i * 4, fy + 2);
+          pCtx.stroke();
+        }
+
+        // Glabellar vertical frown lines between brows
+        pCtx.strokeStyle = 'rgba(20, 20, 20, 0.72)';
+        pCtx.lineWidth = 2.4;
+        pCtx.beginPath();
+        pCtx.moveTo(247, 198);
+        pCtx.lineTo(245, 224);
+        pCtx.moveTo(265, 198);
+        pCtx.lineTo(267, 224);
+        pCtx.stroke();
+
+        // --- F. DEEP-SET SHADOWED EYE SOCKETS ---
+        // Left & right orbital shadows (signature deep-set intensity)
+        const leftSocket = pCtx.createRadialGradient(212, 238, 6, 212, 240, 38);
+        leftSocket.addColorStop(0, 'rgba(8, 8, 8, 0.92)');
+        leftSocket.addColorStop(0.6, 'rgba(22, 22, 22, 0.65)');
+        leftSocket.addColorStop(1, 'rgba(22, 22, 22, 0)');
+        pCtx.fillStyle = leftSocket;
+        pCtx.fillRect(168, 205, 86, 68);
+
+        const rightSocket = pCtx.createRadialGradient(300, 238, 6, 300, 240, 38);
+        rightSocket.addColorStop(0, 'rgba(5, 5, 5, 0.95)');
+        rightSocket.addColorStop(0.6, 'rgba(18, 18, 18, 0.72)');
+        rightSocket.addColorStop(1, 'rgba(18, 18, 18, 0)');
+        pCtx.fillStyle = rightSocket;
+        pCtx.fillRect(258, 205, 86, 68);
+
+        // Eyes (piercing, slightly recessed under heavy lids)
+        function drawEye(ex, ey, isLeft) {
+          // Subtle sclera glint
+          pCtx.fillStyle = '#b8b8b8';
+          pCtx.beginPath();
+          pCtx.ellipse(ex, ey, 13, 5.2, isLeft ? -0.05 : 0.05, 0, Math.PI * 2);
+          pCtx.fill();
+
+          // Dark iris
+          pCtx.fillStyle = '#111111';
+          pCtx.beginPath();
+          pCtx.arc(ex, ey, 5.2, 0, Math.PI * 2);
+          pCtx.fill();
+
+          // Pinpoint catchlight
+          pCtx.fillStyle = '#ffffff';
+          pCtx.beginPath();
+          pCtx.arc(ex - 1.8, ey - 1.5, 1.4, 0, Math.PI * 2);
+          pCtx.fill();
+
+          // Heavy upper eyelid crease
+          pCtx.strokeStyle = '#050505';
+          pCtx.lineWidth = 2.6;
+          pCtx.beginPath();
+          pCtx.moveTo(ex - 16, ey - 2);
+          pCtx.quadraticCurveTo(ex, ey - 8, ex + 16, ey - 1);
+          pCtx.stroke();
+        }
+        drawEye(212, 240, true);
+        drawEye(300, 240, false);
+
+        // --- G. HEAVY BUSHY EYEBROWS ---
+        function drawBrow(x1, y1, cx1, cy1, x2, y2) {
+          pCtx.save();
+          pCtx.strokeStyle = '#141414';
+          pCtx.lineCap = 'round';
+          for (let s = 0; s < 55; s++) {
+            const t = s / 55;
+            const bx = (1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * cx1 + t * t * x2;
+            const by = (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * cy1 + t * t * y2;
+            const angle = (t - 0.3) * 0.65;
+            const len = 11 + Math.sin(t * Math.PI) * 6;
+            pCtx.lineWidth = 1.6 + Math.random() * 1.2;
+            pCtx.strokeStyle = s % 5 === 0 ? '#555555' : '#0f0f0f';
+            pCtx.beginPath();
+            pCtx.moveTo(bx, by - 3);
+            pCtx.lineTo(bx + Math.cos(angle) * len * 0.6, by + len * 0.65);
+            pCtx.stroke();
+          }
+          pCtx.restore();
+        }
+        drawBrow(175, 223, 212, 214, 244, 224);
+        drawBrow(337, 223, 300, 214, 268, 224);
+
+        // --- H. PROMINENT AQUILINE NOSE ---
+        // Nose bridge highlight
+        const noseBridge = pCtx.createLinearGradient(244, 225, 268, 312);
+        noseBridge.addColorStop(0, '#d8d8d8');
+        noseBridge.addColorStop(0.55, '#ffffff');
+        noseBridge.addColorStop(1, '#cfcfcf');
+        pCtx.fillStyle = noseBridge;
+        pCtx.beginPath();
+        pCtx.moveTo(251, 224);
+        pCtx.lineTo(260, 224);
+        pCtx.lineTo(267, 306);
+        pCtx.quadraticCurveTo(256, 316, 245, 306);
+        pCtx.closePath();
+        pCtx.fill();
+
+        // Right side nose shadow & nostrils
+        pCtx.fillStyle = 'rgba(18, 18, 18, 0.72)';
+        pCtx.beginPath();
+        pCtx.moveTo(260, 226);
+        pCtx.lineTo(277, 304);
+        pCtx.lineTo(264, 314);
+        pCtx.closePath();
+        pCtx.fill();
+
+        // Nostril wings & under-nose shadow
+        pCtx.fillStyle = '#121212';
+        pCtx.beginPath();
+        pCtx.ellipse(243, 310, 8, 4.5, -0.2, 0, Math.PI * 2);
+        pCtx.ellipse(269, 310, 8, 4.5, 0.2, 0, Math.PI * 2);
+        pCtx.fill();
+
+        // --- I. CHIN & LOWER JAW SHADOW UNDER MOUSTACHE ---
+        const chinShadow = pCtx.createRadialGradient(256, 382, 8, 256, 405, 58);
+        chinShadow.addColorStop(0, '#121212');
+        chinShadow.addColorStop(0.55, '#8a8a8a');
+        chinShadow.addColorStop(1, '#2b2b2b');
+        pCtx.fillStyle = chinShadow;
+        pCtx.fillRect(195, 360, 122, 88);
+
+        // Chin cleft highlight
+        pCtx.fillStyle = 'rgba(225, 225, 225, 0.52)';
+        pCtx.beginPath();
+        pCtx.ellipse(256, 412, 18, 12, 0, 0, Math.PI * 2);
+        pCtx.fill();
+
+        pCtx.restore(); // End face clip
+
+        // --- J. THE ICONIC MASSIVE WALRUS MOUSTACHE ---
+        // Nietzsche's defining visual signature: huge, thick, drooping handlebar/walrus
+        // moustache completely covering the mouth and cascading down past the jaw corners.
+        pCtx.save();
+
+        // Base dark mass for depth & shadow beneath moustache
+        pCtx.fillStyle = '#0c0c0c';
+        pCtx.beginPath();
+        pCtx.moveTo(256, 316);
+        pCtx.bezierCurveTo(212, 314, 174, 342, 166, 398);
+        pCtx.bezierCurveTo(164, 418, 182, 424, 196, 408);
+        pCtx.bezierCurveTo(216, 384, 236, 372, 256, 372);
+        pCtx.bezierCurveTo(276, 372, 296, 384, 316, 408);
+        pCtx.bezierCurveTo(330, 424, 348, 418, 346, 398);
+        pCtx.bezierCurveTo(338, 342, 300, 314, 256, 316);
+        pCtx.closePath();
+        pCtx.fill();
+
+        // Render hundreds of layered individual hair bristles for unmistakable texture
+        const strandCount = 680;
+        for (let i = 0; i < strandCount; i++) {
+          const side = i % 2 === 0 ? -1 : 1; // Left or right wing
+          const u = Math.random(); // 0 = center philtrum, 1 = outer wing
+          const v = Math.random(); // Vertical layer
+
+          const startX = 256 + side * (u * 34);
+          const startY = 317 + u * 12 + v * 22;
+
+          const endX = 256 + side * (22 + u * 72 + (Math.random() - 0.5) * 10);
+          const endY = 366 + u * 48 + v * 16;
+
+          const ctrlX = (startX + endX) * 0.5 + side * (14 + u * 16);
+          const ctrlY = startY + 6 + u * 10;
+
+          // Lighting variation: upper-left catches silvery light, underside is dark
+          let lum = 35;
+          if (v < 0.35) {
+            lum = side === -1 ? 145 + Math.random() * 85 : 105 + Math.random() * 70;
+          } else if (v < 0.7) {
+            lum = 65 + Math.random() * 55;
+          } else {
+            lum = 18 + Math.random() * 30;
+          }
+
+          const g = Math.floor(lum);
+          pCtx.strokeStyle = `rgb(${g},${g},${g})`;
+          pCtx.lineWidth = 1.1 + Math.random() * 1.4;
+          pCtx.beginPath();
+          pCtx.moveTo(startX, startY);
+          pCtx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
+          pCtx.stroke();
+        }
+        pCtx.restore();
+
+        // --- K. SWEPT-BACK TEMPLE & CROWN HAIR TEXTURE ---
+        pCtx.save();
+        for (let h = 0; h < 340; h++) {
+          const side = h % 2 === 0 ? -1 : 1;
+          const t = Math.random();
+          const hx = 256 + side * (72 + t * 52);
+          const hy = 95 + t * 185;
+          const ex = hx + side * (14 + Math.random() * 16);
+          const ey = hy + 28 + Math.random() * 24;
+
+          const shade = side === -1 ? 45 + Math.random() * 65 : 22 + Math.random() * 40;
+          const sVal = Math.floor(shade);
+          pCtx.strokeStyle = `rgb(${sVal},${sVal},${sVal})`;
+          pCtx.lineWidth = 1.4 + Math.random() * 1.6;
+          pCtx.beginPath();
+          pCtx.moveTo(hx, hy);
+          pCtx.quadraticCurveTo(hx + side * 12, hy + 14, ex, ey);
+          pCtx.stroke();
+        }
+        pCtx.restore();
+
+        pCtx.restore();
+      }
+
+      // ------------------------------------------------------------------------
+      // 3. SAMPLE PORTRAIT BUFFER INTO MATRIX CHARACTER CELLS
+      // ------------------------------------------------------------------------
+      function buildPortraitGrid() {
+        portraitCells = [];
+
+        // Determine responsive portrait bounding box centered in viewport
+        const aspect = SRC_W / SRC_H; // 0.8
+        let targetH = Math.min(height * 0.84, width * 1.12);
+        let targetW = targetH * aspect;
+
+        if (targetW > width * 0.9) {
+          targetW = width * 0.9;
+          targetH = targetW / aspect;
+        }
+
+        portraitBounds = {
+          x: (width - targetW) * 0.5,
+          y: (height - targetH) * 0.51,
+          w: targetW,
+          h: targetH
+        };
+
+        // Adaptive grid density: crisp facial detail while staying ultra-fast
+        cellFontSize = Math.max(6, Math.min(10, Math.round(targetW / 62)));
+        const stepX = cellFontSize * 0.78;
+        const stepY = cellFontSize * 0.92;
+
+        const cols = Math.floor(targetW / stepX);
+        const rows = Math.floor(targetH / stepY);
+
+        const imgData = pCtx.getImageData(0, 0, SRC_W, SRC_H).data;
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const normX = c / cols;
+            const normY = r / rows;
+
+            const sx = Math.min(SRC_W - 1, Math.floor(normX * SRC_W));
+            const sy = Math.min(SRC_H - 1, Math.floor(normY * SRC_H));
+            const idx = (sy * SRC_W + sx) * 4;
+
+            // Perceived luminance (0..1)
+            const lum =
+              (0.299 * imgData[idx] +
+                0.587 * imgData[idx + 1] +
+                0.114 * imgData[idx + 2]) /
+              255;
+
+            // Skip pure black background cells to keep matrix rain clean
+            if (lum < 0.055) continue;
+
+            // Contrast curve to sharpen facial features & moustache strands
+            const contrastLum = Math.min(1, Math.pow(lum, 0.88) * 1.18);
+
+            const homeX = portraitBounds.x + c * stepX + stepX * 0.5;
+            const homeY = portraitBounds.y + r * stepY + stepY * 0.5;
+
+            // Pick character from density ramp weighted by brightness
+            const rampIdx = Math.min(
+              DENSITY_RAMP.length - 1,
+              Math.floor(contrastLum * (DENSITY_RAMP.length - 1))
+            );
+
+            // Random dispersion vector for reconstruction effect
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 90 + Math.random() * Math.max(width, height) * 0.45;
+
+            portraitCells.push({
+              homeX,
+              homeY,
+              x: homeX,
+              y: homeY - (80 + Math.random() * 260), // Starts elevated for boot fall-in
+              dispX: Math.cos(angle) * dist,
+              dispY: Math.sin(angle) * dist,
+              lum: contrastLum,
+              char: DENSITY_RAMP[rampIdx],
+              baseRampIdx: rampIdx,
+              phase: Math.random() * Math.PI * 2,
+              revealThreshold: Math.random() * 0.72 + (1 - contrastLum) * 0.25,
+              flickerRate: 0.008 + Math.random() * 0.025
+            });
+          }
+        }
+      }
+
+      // ------------------------------------------------------------------------
+      // 4. MATRIX DIGITAL RAIN STREAMS (BACKGROUND & FOREGROUND)
+      // ------------------------------------------------------------------------
+      function initRainStreams() {
+        bgStreams = [];
+        fgStreams = [];
+
+        const bgColWidth = Math.max(13, Math.round(width / 105));
+        const bgCols = Math.ceil(width / bgColWidth);
+
+        for (let i = 0; i < bgCols; i++) {
+          bgStreams.push(createStream(i * bgColWidth, bgColWidth, false));
+        }
+
+        const fgColWidth = Math.max(18, Math.round(width / 60));
+        const fgCols = Math.ceil(width / fgColWidth);
+
+        for (let i = 0; i < fgCols; i++) {
+          fgStreams.push(createStream(i * fgColWidth, fgColWidth, true));
+        }
+      }
+
+      function createStream(x, colW, isForeground) {
+        const length = isForeground
+          ? 10 + Math.floor(Math.random() * 18)
+          : 14 + Math.floor(Math.random() * 28);
+
+        const chars = new Array(length);
+        for (let j = 0; j < length; j++) {
+          chars[j] = randomMatrixChar();
+        }
+
+        return {
+          baseX: x,
+          x: x,
+          y: -Math.random() * height * 1.4,
+          speed: isForeground
+            ? 145 + Math.random() * 185
+            : 65 + Math.random() * 155,
+          fontSize: isForeground
+            ? Math.max(12, Math.min(16, colW * 0.78))
+            : Math.max(10, Math.min(14, colW * 0.82)),
+          length,
+          chars,
+          opacity: isForeground
+            ? 0.28 + Math.random() * 0.35
+            : 0.35 + Math.random() * 0.55,
+          isForeground,
+          mutateTimer: Math.random() * 0.2
+        };
+      }
+
+      function randomMatrixChar() {
+        return MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
+      }
+
+      // ------------------------------------------------------------------------
+      // 5. RESIZE & DEVICE PIXEL RATIO MANAGEMENT
+      // ------------------------------------------------------------------------
+      function handleResize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        initRainStreams();
+        buildPortraitGrid();
+      }
+
+      // ------------------------------------------------------------------------
+      // 6. INTERACTIVE TRIGGERS (GLITCH WAVE, RECONSTRUCTION, CUSTOM IMAGE)
+      // ------------------------------------------------------------------------
+      function triggerGlitchWave(originY = height * 0.5) {
+        glitchIntensity = 1.0;
+        glitchWaves.push({
+          y: originY,
+          radius: 10,
+          maxRadius: Math.max(width, height) * 0.95,
+          speed: 780,
+          alpha: 0.9
+        });
+      }
+
+      function toggleDisperseReconstruct() {
+        disperseMode = !disperseMode;
+        if (disperseMode) {
+          triggerGlitchWave(height * 0.48);
+          statusText.textContent = 'CONSCIOUSNESS DISPERSED // MATRIX FLUX';
+        } else {
+          triggerGlitchWave(height * 0.48);
+          statusText.textContent = 'REASSEMBLING NEURAL LATTICE...';
+        }
+      }
+
+      function loadCustomPortrait(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+          const img = new Image();
+          img.onload = function () {
+            // Draw uploaded image onto offscreen portrait canvas with high-contrast B&W
+            pCtx.save();
+            pCtx.fillStyle = '#000000';
+            pCtx.fillRect(0, 0, SRC_W, SRC_H);
+
+            const scale = Math.min(SRC_W / img.width, SRC_H / img.height);
+            const dw = img.width * scale;
+            const dh = img.height * scale;
+            const dx = (SRC_W - dw) * 0.5;
+            const dy = (SRC_H - dh) * 0.5;
+
+            pCtx.filter = 'grayscale(100%) contrast(145%) brightness(105%)';
+            pCtx.drawImage(img, dx, dy, dw, dh);
+            pCtx.restore();
+
+            buildPortraitGrid();
+            triggerGlitchWave(height * 0.5);
+            statusText.textContent = 'EXTERNAL SOURCE MAPPED // ACTIVE';
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      // ------------------------------------------------------------------------
+      // 7. MAIN ANIMATION LOOP (60FPS)
+      // ------------------------------------------------------------------------
+      function animate(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+        const elapsed = (now - startTime) / 1000;
+
+        // Cinematic opening sequence progression (0 -> 1 over 4.6 seconds)
+        if (bootProgress < 1) {
+          bootProgress = Math.min(1, elapsed / 4.6);
+          if (bootProgress < 0.3) {
+            statusText.textContent = 'STREAMING MATRIX CARRIER...';
+          } else if (bootProgress < 0.75) {
+            statusText.textContent = `RECONSTRUCTING CONSCIOUSNESS // ${Math.floor(bootProgress * 100)}%`;
+          } else if (bootProgress >= 0.99 && !disperseMode) {
+            statusText.textContent = 'CONSCIOUSNESS_RECONSTRUCTED // 99.4%';
+          }
+        }
+
+        // Smoothly interpolate dispersion factor
+        const targetDisp = disperseMode ? 1 : 0;
+        disperseAmount += (targetDisp - disperseAmount) * Math.min(1, dt * 3.4);
+        if (!disperseMode && disperseAmount < 0.03 && bootProgress >= 1) {
+          statusText.textContent = 'CONSCIOUSNESS_RECONSTRUCTED // 99.4%';
+        }
+
+        // Decay glitch intensity
+        if (glitchIntensity > 0) {
+          glitchIntensity = Math.max(0, glitchIntensity - dt * 1.9);
+        }
+
+        // Ambient periodic micro-glitch
+        if (Math.random() < 0.0045 && glitchIntensity < 0.1) {
+          glitchIntensity = 0.28;
+        }
+
+        // 1) Clear frame with pure black + subtle phosphor persistence
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.86)';
+        ctx.fillRect(0, 0, width, height);
+
+        // 2) Render Background Digital Rain Layer
+        const rainDensityFactor = Math.min(1, elapsed / 1.4);
+        renderRainLayer(bgStreams, dt, rainDensityFactor);
+
+        // 3) Render Nietzsche Matrix Character Portrait
+        renderPortraitLayer(now, dt, bootProgress);
+
+        // 4) Render Foreground Rain Layer (streams passing subtly over the face)
+        renderRainLayer(fgStreams, dt, rainDensityFactor * 0.85);
+
+        // 5) Render Glitch Slices & Chromatic Distortion Pulses
+        renderGlitchEffects(dt);
+
+        requestAnimationFrame(animate);
+      }
+
+      function renderRainLayer(streams, dt, activeRatio) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const activeCount = Math.floor(streams.length * activeRatio);
+
+        for (let i = 0; i < activeCount; i++) {
+          const s = streams[i];
+          s.y += s.speed * dt;
+          s.mutateTimer += dt;
+
+          // Organic random glyph mutation
+          if (s.mutateTimer > 0.07) {
+            s.mutateTimer = 0;
+            const randIdx = Math.floor(Math.random() * s.length);
+            s.chars[randIdx] = randomMatrixChar();
+          }
+
+          // Cursor spatial distortion around pointer
+          let offsetX = 0;
+          if (pointer.active) {
+            const dx = s.baseX - pointer.x;
+            const dist = Math.abs(dx);
+            if (dist < 130) {
+              const force = (1 - dist / 130) * 18;
+              offsetX = (dx >= 0 ? 1 : -1) * force;
+            }
+          }
+
+          const drawX = s.baseX + offsetX;
+          const stepY = s.fontSize * 1.15;
+
+          ctx.font = `${s.fontSize}px "Courier New", monospace`;
+
+          for (let j = 0; j < s.length; j++) {
+            const charY = s.y - j * stepY;
+            if (charY < -stepY || charY > height + stepY) continue;
+
+            const ratio = 1 - j / s.length;
+            const alpha = ratio * s.opacity;
+            if (alpha < 0.03) continue;
+
+            if (j === 0) {
+              // Bright white-green / neon leading character
+              ctx.fillStyle = `rgba(204, 255, 204, ${Math.min(1, s.opacity * 1.45)})`;
+            } else if (j < 3) {
+              ctx.fillStyle = `rgba(57, 255, 20, ${alpha})`;
+            } else if (ratio > 0.45) {
+              ctx.fillStyle = `rgba(0, 255, 65, ${alpha * 0.85})`;
+            } else {
+              ctx.fillStyle = `rgba(0, 143, 17, ${alpha * 0.75})`;
+            }
+
+            ctx.fillText(s.chars[j], drawX, charY);
+          }
+
+          // Reset stream at top once tail exits viewport
+          if (s.y - s.length * stepY > height) {
+            s.y = -Math.random() * 180;
+            s.speed = s.isForeground
+              ? 145 + Math.random() * 185
+              : 65 + Math.random() * 155;
+          }
+        }
+      }
+
+      function renderPortraitLayer(now, dt, boot) {
+        if (boot < 0.12) return;
+
+        // Smooth easing for portrait emergence
+        const emergence = Math.min(1, Math.max(0, (boot - 0.12) / 0.88));
+        const easedEmergence = 1 - Math.pow(1 - emergence, 3);
+
+        ctx.font = `bold ${cellFontSize}px "Courier New", monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const timeSec = now * 0.001;
+
+        for (let i = 0; i < portraitCells.length; i++) {
+          const cell = portraitCells[i];
+
+          // Staggered emergence per cell during boot sequence
+          if (easedEmergence < cell.revealThreshold) continue;
+
+          const cellVisibility = Math.min(
+            1,
+            (easedEmergence - cell.revealThreshold) * 3.5
+          );
+
+          // Target position combines boot fall-in + dispersion state
+          const bootDropOffset = (1 - cellVisibility) * -45;
+          let targetX = cell.homeX + cell.dispX * disperseAmount;
+          let targetY = cell.homeY + bootDropOffset + cell.dispY * disperseAmount;
+
+          // Subtle living respiration & neural micro-oscillation
+          targetX += Math.sin(timeSec * 1.6 + cell.phase) * 0.65;
+          targetY += Math.cos(timeSec * 1.3 + cell.phase) * 0.65;
+
+          // Interactive cursor magnetic ripple
+          if (pointer.active) {
+            const dx = targetX - pointer.x;
+            const dy = targetY - pointer.y;
+            const distSq = dx * dx + dy * dy;
+            const radius = 115;
+            if (distSq < radius * radius && distSq > 0.01) {
+              const dist = Math.sqrt(distSq);
+              const push = (1 - dist / radius) * 20;
+              targetX += (dx / dist) * push;
+              targetY += (dy / dist) * push;
+            }
+          }
+
+          // Smooth spring interpolation
+          cell.x += (targetX - cell.x) * Math.min(1, dt * 11);
+          cell.y += (targetY - cell.y) * Math.min(1, dt * 11);
+
+          // Occasional subtle glyph flicker around its luminance density
+          if (Math.random() < cell.flickerRate) {
+            const jitter = Math.floor((Math.random() - 0.5) * 4);
+            const idx = Math.max(
+              1,
+              Math.min(DENSITY_RAMP.length - 1, cell.baseRampIdx + jitter)
+            );
+            cell.char = DENSITY_RAMP[idx];
+          }
+
+          // Subtle brightness pulse
+          const pulse = 0.92 + 0.08 * Math.sin(timeSec * 2.4 + cell.phase);
+          const lum = cell.lum * pulse * cellVisibility;
+
+          // Map luminance to Matrix green palette with white-green highlights on nose/brow/moustache
+          if (lum > 0.84) {
+            ctx.fillStyle = `rgba(204, 255, 204, ${Math.min(1, lum)})`;
+          } else if (lum > 0.62) {
+            ctx.fillStyle = `rgba(57, 255, 20, ${Math.min(0.96, lum * 1.05)})`;
+          } else if (lum > 0.34) {
+            ctx.fillStyle = `rgba(0, 255, 65, ${lum * 0.92})`;
+          } else if (lum > 0.16) {
+            ctx.fillStyle = `rgba(0, 143, 17, ${lum * 1.15})`;
+          } else {
+            ctx.fillStyle = `rgba(0, 68, 18, ${lum * 1.4})`;
+          }
+
+          ctx.fillText(cell.char, cell.x, cell.y);
+        }
+      }
+
+      function renderGlitchEffects(dt) {
+        // Expanding shockwave rings from click / reconstruction triggers
+        for (let i = glitchWaves.length - 1; i >= 0; i--) {
+          const w = glitchWaves[i];
+          w.radius += w.speed * dt;
+          w.alpha -= dt * 1.15;
+
+          if (w.alpha <= 0 || w.radius > w.maxRadius) {
+            glitchWaves.splice(i, 1);
+            continue;
+          }
+
+          ctx.save();
+          ctx.strokeStyle = `rgba(57, 255, 20, ${w.alpha * 0.45})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(width * 0.5, w.y, w.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Horizontal digital displacement slices during glitch pulses
+        if (glitchIntensity > 0.05) {
+          const sliceCount = Math.ceil(glitchIntensity * 9);
+          for (let s = 0; s < sliceCount; s++) {
+            const sy = Math.random() * height;
+            const sh = 3 + Math.random() * 22;
+            const shiftX = (Math.random() - 0.5) * 46 * glitchIntensity;
+
+            ctx.save();
+            // Copy & horizontally shift a slice of the rendered canvas
+            ctx.drawImage(
+              canvas,
+              0,
+              sy * dpr,
+              width * dpr,
+              sh * dpr,
+              shiftX,
+              sy,
+              width,
+              sh
+            );
+
+            // Subtle chromatic aberration tint bar
+            ctx.fillStyle =
+              s % 2 === 0
+                ? `rgba(57, 255, 20, ${0.14 * glitchIntensity})`
+                : `rgba(0, 255, 180, ${0.1 * glitchIntensity})`;
+            ctx.fillRect(0, sy, width, 2);
+            ctx.restore();
+          }
+        }
+      }
+
+      // ------------------------------------------------------------------------
+      // 8. EVENT LISTENERS (MOUSE, TOUCH, KEYBOARD, DRAG & DROP)
+      // ------------------------------------------------------------------------
+      window.addEventListener('resize', handleResize);
+
+      window.addEventListener('pointermove', (e) => {
+        pointer.vx = e.clientX - pointer.x;
+        pointer.vy = e.clientY - pointer.y;
+        pointer.x = e.clientX;
+        pointer.y = e.clientY;
+        pointer.active = true;
+      });
+
+      window.addEventListener('pointerleave', () => {
+        pointer.active = false;
+      });
+
+      canvas.addEventListener('click', (e) => {
+        triggerGlitchWave(e.clientY);
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'r' || e.key === 'R') {
+          toggleDisperseReconstruct();
+        } else if (e.code === 'Space') {
+          e.preventDefault();
+          triggerGlitchWave(height * 0.5);
+        }
+      });
+
+      // Minimal HUD terminal buttons
+      document
+        .getElementById('btn-reconstruct')
+        .addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleDisperseReconstruct();
+        });
+
+      document.getElementById('btn-glitch').addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerGlitchWave(height * 0.48);
+      });
+
+      const uploadInput = document.getElementById('portrait-upload');
+      document.getElementById('btn-upload').addEventListener('click', (e) => {
+        e.stopPropagation();
+        uploadInput.click();
+      });
+
+      uploadInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          loadCustomPortrait(e.target.files[0]);
+        }
+      });
+
+      // Drag & drop custom image onto viewport
+      const dropIndicator = document.getElementById('drop-indicator');
+      window.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropIndicator.classList.add('active');
+      });
+
+      window.addEventListener('dragleave', (e) => {
+        if (e.relatedTarget === null) {
+          dropIndicator.classList.remove('active');
+        }
+      });
+
+      window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropIndicator.classList.remove('active');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          loadCustomPortrait(e.dataTransfer.files[0]);
+        }
+      });
+
+      // ------------------------------------------------------------------------
+      // 9. BOOT INITIALIZATION
+      // ------------------------------------------------------------------------
+      window.addEventListener('load', () => {
+        renderProceduralNietzsche();
+        handleResize();
+        requestAnimationFrame(animate);
+      });
+    })();
+  </script>
+</body>
+</html>
